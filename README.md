@@ -3,7 +3,7 @@ Uses Azure for authorization.
 How to use:
 
 1. Click the GPTs button and setup a GPT of your choice (Azure-style)
-2. Go back to the Query menu and select your GPT
+2. Go back to the Make a song menu and select your GPT
 3. Select a Prompt
 4. Write whatever you want your song to be about in the Query textfield
 5. Click generate and wait for the response
