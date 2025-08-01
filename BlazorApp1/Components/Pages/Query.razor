@@ -1,0 +1,342 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+@inject IGPT GPT
+@inject IRepository Repository
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+	:root {
+		--primary-color: #2b2d42;
+		--secondary-color: #4a4e69;
+		--accent-color: #9a8c98;
+		--text-color: #f8f9fa;
+		--highlight-color: #f4a261;
+		--border-color: #6d6875;
+		--sunset-orange: #e76f51;
+		--sunset-yellow: #f4a261;
+		--sunset-pink: #e9c46a;
+	}
+
+	body {
+		font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+		background-color: var(--primary-color);
+		color: var(--text-color);
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		min-height: 100vh;
+	}
+
+	.container {
+		display: flex;
+		flex: 1;
+		padding: 20px;
+		gap: 20px;
+	}
+
+	.main-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.content-row {
+		display: flex;
+		gap: 20px;
+	}
+
+	.left-panel {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.right-panel {
+		width: 300px;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.box {
+		background-color: var(--secondary-color);
+		border-radius: 8px;
+		padding: 15px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		border: 1px solid var(--border-color);
+		background: linear-gradient(to bottom right, rgba(74, 78, 105, 0.8), rgba(154, 140, 152, 0.4));
+	}
+
+	.box-header {
+		font-size: 1.2rem;
+		margin-bottom: 10px;
+		color: var(--highlight-color);
+		font-weight: bold;
+		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+	}
+
+	textarea, select {
+		width: 100%;
+		padding: 10px;
+		border-radius: 5px;
+		border: 1px solid var(--border-color);
+		background-color: rgba(43, 45, 66, 0.7);
+		color: var(--text-color);
+		font-size: 0.9rem;
+		resize: vertical;
+	}
+
+	textarea {
+		min-height: 100px;
+	}
+
+	select {
+		height: 40px;
+	}
+
+	.btn {
+		background: linear-gradient(to right, var(--sunset-orange), var(--sunset-yellow));
+		color: var(--primary-color);
+		border: none;
+		padding: 10px 15px;
+		border-radius: 5px;
+		cursor: pointer;
+		font-weight: bold;
+		margin-top: 10px;
+		width: 100%;
+		transition: all 0.2s;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	}
+
+		.btn:hover {
+			background: linear-gradient(to right, #e85c3a, #f39c5c);
+			transform: translateY(-1px);
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+		}
+
+	.box:nth-child(odd) {
+		border-top: 2px solid var(--sunset-orange);
+	}
+
+	.box:nth-child(even) {
+		border-top: 2px solid var(--sunset-yellow);
+	}
+</style>
+
+@if (showPopup)
+{
+	<GPTSMPopup message="@popupMessage" OnExpire="ClosePopup" color="@color"/>
+}
+<div class="container">
+	<div class="main-content">
+		<div class="content-row">
+			<GPTSMSidebar />
+			<div class="left-panel">
+				<div class="box">
+					<div class="box-header">Query</div>
+					<textarea placeholder="Enter your query here..." @bind="query"></textarea>
+				</div>
+				<div class="box">
+					@if (title.Item2)
+					{
+						<div class="box-header">@title.Item1</div>
+					}
+					else
+					{
+						<div class="box-header">Song Title</div>
+					}
+				</div>
+				<div class="box">
+					<div class="box-header">Styles</div>
+					@if (!styles.Item2)
+					{
+						<textarea placeholder="Here be dragons..." readonly></textarea>
+					}
+					else
+					{
+						<textarea placeholder="Enter styles here..." @bind=styles.Item1></textarea>
+					}
+				</div>
+				<div class="box">
+					<div class="box-header">Lyrics</div>
+					@if (!lyrics.Item2)
+					{
+						<textarea placeholder="Here be dragons..." readonly></textarea>
+					}
+					else
+					{
+						<textarea placeholder="Enter lyrics here..." @bind=lyrics.Item1></textarea>
+					}
+				</div>
+				@if (title.Item2)
+				{
+					<div class="box" style="display: flex; gap: 30px; padding-left: 15px; padding-right: 15px; padding-top: 10px">
+						<button class="btn btn-primary" @onclick="Discard">Discard</button>
+						<button class="btn btn-primary" @onclick="SaveSong">Save</button>
+					</div>
+				}
+				else
+				{
+					<div class="box">
+						<div class="left-panel">
+							<button class="btn btn-primary" @onclick="InfereGPT">Generate new song</button>
+						</div>
+					</div>
+				}
+			</div>
+
+			<div class="right-panel">
+				<div class="box">
+					<div class="box-header">GPTs</div>
+					<select @bind=selectedSettings.Item1 @bind:after="ChangeGPTSettings">
+						@if (availableGPTs.Any())
+						{
+							<option value="-1">No GPTs selected</option>
+							for (int i = 0; i < availableGPTs.Count; i++)
+							{
+								<option value="@i">@availableGPTs[i].SettingTitle</option>
+							}
+						}
+						else
+						{
+							<option value="-1">No GPTs available</option>
+						}
+					</select>
+				</div>
+				<div class="box">
+					<div class="box-header">Prompts</div>
+					<select @bind=selectedPrompt.Item1 @bind:after="(() => { Instruments.ChangeSelectedViaID(selectedPrompt.Item1, ref selectedPrompt.Item2, availablePrompts); })">
+						@if (availablePrompts.Any())
+						{
+							<option value="-1">No prompts selected</option>
+							for (int i = 0; i < availablePrompts.Count; i++)
+							{
+								<option value="@i">@availablePrompts[i].PromptTitle</option>
+							}
+						}
+						else
+						{
+							<option value="-1">No prompts available</option>
+						}
+					</select>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+@code {
+	Task Generating = Task.CompletedTask;
+
+	List<Prompt>? availablePrompts;
+	List<GPTSettings>? availableGPTs;
+	List<Song> songs;
+
+	bool showPopup = false;
+	string popupMessage = "";
+	string color = "";
+
+	string query = "";
+
+	(string, Prompt) selectedPrompt = ("-1", null!);
+	(string, GPTSettings) selectedSettings = ("-1", null!);
+
+	(string, bool) styles = ("", false);
+	(string, bool) lyrics = ("", false);
+	(string, bool) title = ("", false);
+
+	protected override async Task OnInitializedAsync()
+	{
+		availablePrompts = await Repository.GetPrompts();
+		availableGPTs = await Repository.GetGPTsSettings();
+		songs = await Repository.GetSongs();
+	}
+
+	void SaveSong()
+	{
+		Song song = new(title.Item1, lyrics.Item1, styles.Item1) { Id = songs.Any() ? songs.Last().Id + 1 : 1 };
+		if (!song.IsValid(out string errorMessage))
+		{
+			ShowPopup(errorMessage, "#B9140E");
+		}
+		else
+		{
+			DBDataChange(Repository.Add(song));
+			ShowPopup("Saved!", "#4DB222");
+		}
+	}
+	void Discard()
+	{
+		ResetFields();
+		ShowPopup("Discarded!", "#4DB222");
+	}
+
+	void ChangeGPTSettings()
+	{
+		if (Instruments.ChangeSelectedViaID(selectedSettings.Item1, ref selectedSettings.Item2, availableGPTs))
+		{
+			GPT.Initialize(selectedSettings.Item2);
+		}
+	}
+
+	void InfereGPT()
+	{
+		if (!Generating.IsCompleted)
+		{
+			ShowPopup("GPT is already generating an answer! Chottomatte!", "#B9140E");
+			return;
+		}
+		if (!GPT.IsConfigured)
+		{
+			ShowPopup("Select a GPT first!", "#B9140E");
+			return;
+		}
+		if (selectedPrompt.Item2 is null)
+		{
+			ShowPopup("Choose a prompt first!", "#B9140E");
+			return;
+		}
+		if (!string.IsNullOrEmpty(query))
+		{
+			ShowPopup("Generating...", "#4DB222");
+			Generating = InvokeAsync( async () =>
+			{
+				title = (await GPT.Inference(selectedPrompt.Item2.EmbedQueryIntoTitle(query)), true);
+				styles = (await GPT.Inference(selectedPrompt.Item2.EmbedQueryIntoStyles(query)), true);
+				lyrics = (await GPT.Inference(selectedPrompt.Item2.EmbedQueryAndStylesIntoLyrics(query, styles.Item1)), true);
+				ShowPopup("Finished generating!", "#4DB222");
+				StateHasChanged();
+			});
+		}
+	}
+	void ResetFields()
+	{
+		styles = ("", false);
+		lyrics = ("", false);
+		title = ("", false);
+	}
+	void ShowPopup(string message, string _color)
+	{
+		popupMessage = message;
+		color = _color;
+		showPopup = true;
+	}
+	void ClosePopup()
+	{
+		showPopup = false;
+	}
+	void DBDataChange(Task dbAction)
+	{
+		InvokeAsync(async () =>
+		{
+			await dbAction;
+			availableGPTs = await Repository.GetGPTsSettings();
+			StateHasChanged();
+		});
+	}
+}

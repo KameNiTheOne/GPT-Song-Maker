@@ -1,0 +1,40 @@
+﻿<style>
+    .popup {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px;
+        background-color: #B9140E;
+        color: white;
+        border-radius: 5px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        z-index: 1000;
+    }
+
+    .popup-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+</style>
+<div id="popup-notification" class="popup" style="background-color: @color">
+    <div class="popup-content">
+        <span>@message</span>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string message { get; set; } = "";
+    [Parameter, EditorRequired] public EventCallback OnExpire { get; set; }
+    [Parameter, EditorRequired] public string color { get; set; } = "";
+
+    protected override void OnInitialized()
+    {
+        InvokeAsync(async () =>
+        {
+            await Task.Delay(2000);
+            await OnExpire.InvokeAsync();
+            StateHasChanged();
+        });
+    }  
+}

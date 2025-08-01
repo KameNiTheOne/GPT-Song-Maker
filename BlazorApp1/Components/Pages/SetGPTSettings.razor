@@ -1,0 +1,320 @@
+﻿@page "/GPTs"
+@rendermode InteractiveServer
+
+@inject IRepository Repository
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+	:root {
+		--primary-color: #2b2d42;
+		--secondary-color: #4a4e69;
+		--accent-color: #9a8c98;
+		--text-color: #f8f9fa;
+		--highlight-color: #f4a261;
+		--border-color: #6d6875;
+		--sunset-orange: #e76f51;
+		--sunset-yellow: #f4a261;
+		--sunset-pink: #e9c46a;
+	}
+
+	body {
+		font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+		background-color: var(--primary-color);
+		color: var(--text-color);
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		min-height: 100vh;
+	}
+
+	.container {
+		display: flex;
+		flex: 1;
+		padding: 20px;
+		gap: 20px;
+	}
+
+	.main-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.content-row {
+		display: flex;
+		gap: 20px;
+	}
+
+	.left-panel {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.right-panel {
+		width: 300px;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.box {
+		background-color: var(--secondary-color);
+		border-radius: 8px;
+		padding: 15px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		border: 1px solid var(--border-color);
+		background: linear-gradient(to bottom right, rgba(74, 78, 105, 0.8), rgba(154, 140, 152, 0.4));
+	}
+
+	.box-header {
+		font-size: 1.2rem;
+		margin-bottom: 10px;
+		color: var(--highlight-color);
+		font-weight: bold;
+		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+	}
+
+	textarea, select, input {
+		width: 100%;
+		padding: 10px;
+		border-radius: 5px;
+		border: 1px solid var(--border-color);
+		background-color: rgba(43, 45, 66, 0.7);
+		color: var(--text-color);
+		font-size: 0.9rem;
+		resize: vertical;
+	}
+
+	textarea {
+		min-height: 100px;
+	}
+
+	select {
+		height: 40px;
+	}
+
+	.btn {
+		background: linear-gradient(to right, var(--sunset-orange), var(--sunset-yellow));
+		color: var(--primary-color);
+		border: none;
+		padding: 10px 15px;
+		border-radius: 5px;
+		cursor: pointer;
+		font-weight: bold;
+		margin-top: 10px;
+		width: 100%;
+		transition: all 0.2s;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	}
+
+		.btn:hover {
+			background: linear-gradient(to right, #e85c3a, #f39c5c);
+			transform: translateY(-1px);
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+		}
+
+	.box:nth-child(odd) {
+		border-top: 2px solid var(--sunset-orange);
+	}
+
+	.box:nth-child(even) {
+		border-top: 2px solid var(--sunset-yellow);
+	}
+</style>
+
+@if (showPopup)
+{
+	<GPTSMPopup message="@popupMessage" OnExpire="ClosePopup" color="@color"/>
+}
+<div class="container">
+	<div class="main-content">
+		<div class="content-row">
+			<GPTSMSidebar />
+			<div class="left-panel">
+				<div class="box">
+					<div class="box-header">GPT Setting Title</div>
+					<input placeholder="Enter the title of your GPT setting here..." @bind="settingtitle">
+				</div>
+				<div class="box">
+					<div class="box-header">Model</div>
+					<input placeholder="Enter your model here..." @bind="model">
+				</div>
+				<div class="box">
+					<div class="box-header">Endpoint</div>
+					<input placeholder="Enter your endpoint here..." @bind="endpoint">
+				</div>
+				<div class="box">
+					<div class="box-header">API key</div>
+					<input placeholder="Enter your API key here..." @bind="apikey">
+				</div>
+				<div class="box">
+					<div class="box-header">Temperature</div>
+					<input type="range" min="0" max="100" step="1" @bind="temperature" @bind:event="oninput" />
+					<span class="size-label">
+						@(((double)Convert(temperature)).ToString("0.00"))
+					</span>
+				</div>
+				@if (selectedSettings.Item2 is not null)
+				{
+					<div class="box" style="display: flex; gap: 30px; padding-left: 15px; padding-right: 15px; padding-top: 10px">
+						<button class="btn btn-primary" @onclick="EditGPT">Edit selected GPT Setting</button>
+						<button class="btn btn-primary" @onclick="SaveGPT">Add GPT Setting</button>
+					</div>
+				}
+				else
+				{
+					<div class="box">
+						<div class="left-panel">
+							<button class="btn btn-primary" @onclick="SaveGPT">Add GPT Setting</button>
+						</div>
+					</div>
+				}
+			</div>
+
+			<div class="right-panel">
+				<div class="box">
+					<div class="box-header">GPTs</div>
+					<select @bind=selectedSettings.Item1 @bind:after="ApplyParamsOfSelected">
+						@if (availableGPTs.Any())
+						{
+							<option value="-1">No GPTs selected</option>
+							for (int i = 0; i < availableGPTs.Count; i++)
+							{
+								<option value="@i">@availableGPTs[i].SettingTitle</option>
+							}
+						}
+						else
+						{
+							<option value="-1">No GPTs available</option>
+						}
+					</select>
+				</div>
+				@if (selectedSettings.Item2 is not null)
+				{
+					<div class="box">
+						<button class="btn btn-primary" @onclick="RemoveGPT">Remove GPT Setting</button>
+					</div>
+				}
+			</div>
+		</div>
+	</div>
+</div>
+
+
+@code {
+	(string, GPTSettings) selectedSettings = ("-1", null!);
+
+	bool showPopup = false;
+	string popupMessage = "";
+	string color = "";
+
+	string settingtitle = "";
+	string endpoint = "";
+	string apikey = "";
+	string model = "";
+	int temperature = 0;
+
+	List<GPTSettings>? availableGPTs;
+
+	protected override async Task OnInitializedAsync()
+	{
+		availableGPTs = await Repository.GetGPTsSettings();
+	}
+
+	void SaveGPT()
+	{
+		GPTSettings settings = new(settingtitle, endpoint, apikey, model, Convert(temperature)) { Id = availableGPTs.Any() ? availableGPTs.Last().Id + 1 : 1 };
+		if (!settings.IsValid(out string errorMessage))
+		{
+			ShowPopup(errorMessage, "#B9140E");
+		}
+		else
+		{
+			DBDataChange(Repository.Add(settings));
+			ShowPopup("GPT saved!", "#4DB222");
+		}
+	}
+
+	void EditGPT()
+	{
+		GPTSettings settings = new(settingtitle, endpoint, apikey, model, Convert(temperature)) { Id = selectedSettings.Item2.Id };
+		if (!settings.IsValid(out string errorMessage))
+		{
+			ShowPopup(errorMessage, "#B9140E");
+		}
+		else
+		{
+			DBDataChange(Repository.Edit(settings));
+			ShowPopup($"Edited!", "#4DB222");
+		}
+	}
+
+	void RemoveGPT()
+	{
+		DBDataChange(Repository.Remove(selectedSettings.Item2));
+		ResetFields();
+		ShowPopup("Removed!", "#4DB222");
+	}
+
+	void ApplyParamsOfSelected()
+	{
+		if(Instruments.ChangeSelectedViaID(selectedSettings.Item1, ref selectedSettings.Item2, availableGPTs))
+		{
+			model = selectedSettings.Item2.Model;
+			endpoint = selectedSettings.Item2.Endpoint;
+			apikey = selectedSettings.Item2.APIKey;
+			temperature = Convert(selectedSettings.Item2.Temperature);
+			settingtitle = selectedSettings.Item2.SettingTitle;
+		}
+		else if (availableGPTs.Any())
+		{
+			ResetFields();
+		}
+	}
+
+	void ResetFields()
+	{
+		settingtitle = "";
+		endpoint = "";
+		apikey = "";
+		model = "";
+		temperature = 0;
+		selectedSettings = ("-1", null!);
+	}
+
+	void ShowPopup(string message, string _color)
+	{
+		popupMessage = message;
+		color = _color;
+		showPopup = true;
+	}
+
+	void ClosePopup()
+	{
+		showPopup = false;
+	}
+
+	void DBDataChange(Task dbAction)
+	{
+		InvokeAsync(async () =>
+		{
+			await dbAction;
+			availableGPTs = await Repository.GetGPTsSettings();
+			StateHasChanged();
+		});
+	}
+	int Convert(float temp)
+	{
+		return (int)(temp * 100);
+	}
+	float Convert(int temp)
+	{
+		return ((float)temp) / 100;
+	}
+}

@@ -1,0 +1,302 @@
+﻿@page "/prompts"
+@rendermode InteractiveServer
+
+@inject IRepository Repository
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+	:root {
+		--primary-color: #2b2d42;
+		--secondary-color: #4a4e69;
+		--accent-color: #9a8c98;
+		--text-color: #f8f9fa;
+		--highlight-color: #f4a261;
+		--border-color: #6d6875;
+		--sunset-orange: #e76f51;
+		--sunset-yellow: #f4a261;
+		--sunset-pink: #e9c46a;
+	}
+
+	body {
+		font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+		background-color: var(--primary-color);
+		color: var(--text-color);
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		min-height: 100vh;
+	}
+
+	.container {
+		display: flex;
+		flex: 1;
+		padding: 20px;
+		gap: 20px;
+	}
+
+	.main-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.content-row {
+		display: flex;
+		gap: 20px;
+	}
+
+	.left-panel {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.right-panel {
+		width: 300px;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.box {
+		background-color: var(--secondary-color);
+		border-radius: 8px;
+		padding: 15px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		border: 1px solid var(--border-color);
+		background: linear-gradient(to bottom right, rgba(74, 78, 105, 0.8), rgba(154, 140, 152, 0.4));
+	}
+
+	.box-header {
+		font-size: 1.2rem;
+		margin-bottom: 10px;
+		color: var(--highlight-color);
+		font-weight: bold;
+		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+	}
+
+	textarea, select, input {
+		width: 100%;
+		padding: 10px;
+		border-radius: 5px;
+		border: 1px solid var(--border-color);
+		background-color: rgba(43, 45, 66, 0.7);
+		color: var(--text-color);
+		font-size: 0.9rem;
+		resize: vertical;
+	}
+
+	textarea {
+		min-height: 100px;
+	}
+
+	select {
+		height: 40px;
+	}
+
+	.btn {
+		background: linear-gradient(to right, var(--sunset-orange), var(--sunset-yellow));
+		color: var(--primary-color);
+		border: none;
+		padding: 10px 15px;
+		border-radius: 5px;
+		cursor: pointer;
+		font-weight: bold;
+		margin-top: 10px;
+		width: 100%;
+		transition: all 0.2s;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	}
+
+		.btn:hover {
+			background: linear-gradient(to right, #e85c3a, #f39c5c);
+			transform: translateY(-1px);
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+		}
+
+	.box:nth-child(odd) {
+		border-top: 2px solid var(--sunset-orange);
+	}
+
+	.box:nth-child(even) {
+		border-top: 2px solid var(--sunset-yellow);
+	}
+</style>
+
+@if (showPopup)
+{
+	<GPTSMPopup message="@popupMessage" OnExpire="ClosePopup" color="@color" />
+}
+<div class="container">
+	<div class="main-content">
+		<div class="content-row">
+			<GPTSMSidebar />
+			<div class="left-panel">
+				<div class="box">
+					<div class="box-header">Prompt Title</div>
+					<input placeholder="Enter the title of your Prompt here..." @bind="prompttitle">
+				</div>
+				<div class="box">
+					<div class="box-header">Styles</div>
+					<textarea placeholder="Enter prompt for SunoAI styles here..." @bind="styles"></textarea>
+				</div>
+				<div class="box">
+					<div class="box-header">Lyrics</div>
+					<textarea placeholder="Enter prompt for song lyrics here..." @bind="lyrics"></textarea>
+				</div>
+				<div class="box">
+					<div class="box-header">Title</div>
+					<textarea placeholder="Enter prompt for song title here..." @bind="title"></textarea>
+				</div>
+				@if (selectedPrompt.Item2 is not null)
+				{
+					<div class="box" style="display: flex; gap: 30px; padding-left: 15px; padding-right: 15px; padding-top: 10px">
+						<button class="btn btn-primary" @onclick="EditPrompt">Edit selected Prompt</button>
+						<button class="btn btn-primary" @onclick="SavePrompt">Add Prompt</button>
+					</div>
+				}
+				else
+				{
+					<div class="box">
+						<div class="left-panel">
+							<button class="btn btn-primary" @onclick="SavePrompt">Add Prompt</button>
+						</div>
+					</div>
+				}
+			</div>
+
+			<div class="right-panel">
+				<div class="box">
+					<div class="box-header">GPTs</div>
+					<select @bind=selectedPrompt.Item1 @bind:after="ApplyParamsOfSelected">
+						@if (availablePrompts.Any())
+						{
+							<option value="-1">No Prompts selected</option>
+							for (int i = 0; i < availablePrompts.Count; i++)
+							{
+								<option value="@i">@availablePrompts[i].PromptTitle</option>
+							}
+						}
+						else
+						{
+							<option value="-1">No Prompts available</option>
+						}
+					</select>
+				</div>
+				@if (selectedPrompt.Item2 is not null)
+				{
+					<div class="box">
+						<button class="btn btn-primary" @onclick="RemovePrompt">Remove Prompt</button>
+					</div>
+				}
+			</div>
+		</div>
+	</div>
+</div>
+
+
+@code {
+	(string, Prompt) selectedPrompt = ("-1", null!);
+
+	bool showPopup = false;
+	string popupMessage = "";
+	string color = "";
+
+	string prompttitle = "";
+	string styles = "";
+	string lyrics = "";
+	string title = "";
+
+	List<Prompt>? availablePrompts;
+
+	protected override async Task OnInitializedAsync()
+	{
+		availablePrompts = await Repository.GetPrompts();
+	}
+
+	void SavePrompt()
+	{
+		Prompt prompt = new(prompttitle, lyrics, styles, title) { Id = availablePrompts.Any() ? availablePrompts.Last().Id + 1 : 1 };
+		if (!prompt.IsValid(out string errorMessage))
+		{
+			ShowPopup(errorMessage, "#B9140E");
+		}
+		else
+		{
+			DBDataChange(Repository.Add(prompt));
+			ShowPopup("Added!", "#4DB222");
+		}
+	}
+
+	void EditPrompt()
+	{
+		Prompt prompt = new(prompttitle, lyrics, styles, title) { Id = selectedPrompt.Item2.Id };
+		if (!prompt.IsValid(out string errorMessage))
+		{
+			ShowPopup(errorMessage, "#B9140E");
+		}
+		else
+		{
+			DBDataChange(Repository.Edit(prompt));
+			ShowPopup("Edited!", "#4DB222");
+		}
+	}
+
+	void RemovePrompt()
+	{
+		DBDataChange(Repository.Remove(selectedPrompt.Item2));
+		ResetFields();
+		ShowPopup("Removed!", "#4DB222");
+	}
+
+	void ApplyParamsOfSelected()
+	{
+		if (Instruments.ChangeSelectedViaID(selectedPrompt.Item1, ref selectedPrompt.Item2, availablePrompts))
+		{
+			prompttitle = selectedPrompt.Item2.PromptTitle;
+			styles = selectedPrompt.Item2.Styles;
+			lyrics = selectedPrompt.Item2.Lyrics;
+			title = selectedPrompt.Item2.Title;
+		}
+		else if (availablePrompts.Any())
+		{
+			ResetFields();
+		}
+	}
+
+	void ResetFields()
+	{
+		prompttitle = "";
+		styles = "";
+		lyrics = "";
+		title = "";
+		selectedPrompt = ("-1", null!);
+	}
+
+	void ShowPopup(string message, string _color)
+	{
+		popupMessage = message;
+		color = _color;
+		showPopup = true;
+	}
+
+	void ClosePopup()
+	{
+		showPopup = false;
+	}
+
+	void DBDataChange(Task dbAction)
+	{
+		InvokeAsync(async () =>
+		{
+			await dbAction;
+			availablePrompts = await Repository.GetPrompts();
+			StateHasChanged();
+		});
+	}
+}
