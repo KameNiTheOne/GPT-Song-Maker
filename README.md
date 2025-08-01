@@ -9,4 +9,4 @@ How to use:
 5. Click generate and wait for the response
 6. Edit the result, than save it or discard it
 
-<img width="1920" height="872" alt="{9B8524CC-4344-4068-A01C-A1821F890267}" src="https://github.com/user-attachments/assets/b4be53c7-db1c-4225-bcdf-e597bf9646c5" />
+<img width="1920" height="874" alt="{934DD397-F954-4781-9E49-AD59612D582E}" src="https://github.com/user-attachments/assets/947ac854-47e6-4422-9f6e-d049eeb6455e" />
