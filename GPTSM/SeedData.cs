@@ -1,4 +1,4 @@
-﻿namespace BlazorApp1
+﻿namespace GPTSM
 {
     public static class SeedData
     {

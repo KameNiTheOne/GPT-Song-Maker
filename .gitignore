@@ -1,6 +1,9 @@
 .git
 bin
 obj
+**.config
+**.csproj.user
+**Properties
 **.sln
 **.db
 **.vs

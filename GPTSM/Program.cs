@@ -1,6 +1,6 @@
 global using GPTSMShared;
-using BlazorApp1;
-using BlazorApp1.Components;
+using GPTSM;
+using GPTSM.Components;
 using Microsoft.EntityFrameworkCore;
 class Program
 {

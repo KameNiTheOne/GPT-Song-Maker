@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace BlazorApp1
+namespace GPTSM
 {
 	public class EfRepository : IRepository
 	{
